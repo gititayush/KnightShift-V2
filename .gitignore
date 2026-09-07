@@ -1,21 +1,34 @@
 # Build
 /build/
-
-# Executables
-*.exe
-
-# Object Files
-*.o
-*.obj
-
-# VS Code
-.vscode/
-
-# CMake
+build/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
 
-# Debug
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+**/dist/
+
+# Executables & Binaries
+*.exe
+KnightShift
+KnightShift.exe
+
+# Object Files
+*.o
+*.obj
+
+# Debug & IDE
+.vscode/
+.idea/
 *.pdb
+*.log
+
+# OS generated
+.DS_Store
+Thumbs.db
