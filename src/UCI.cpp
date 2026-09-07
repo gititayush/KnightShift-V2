@@ -5,6 +5,7 @@
 #include <string>
 #include "Search.h"
 #include <cstring>
+#include <chrono>
 #include "TranspositionTable.h"
 #include "SearchStats.h"
 #include "Evaluation.h"
@@ -125,32 +126,72 @@ void Loop()
 
             else if(token == "perft")
             {
-                int depth;
-                ss >> depth;
-
-                Perft::Run(board, depth);
+                int depth = 1;
+                if(ss >> depth)
+                {
+                    auto start = std::chrono::steady_clock::now();
+                    U64 nodes = Perft::Run(board, depth);
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - start).count();
+                    uint64_t nps = elapsed > 0 ? (nodes * 1000) / elapsed : 0;
+                    std::cout << "Nodes: " << nodes
+                              << " Time: " << elapsed << "ms"
+                              << " NPS: " << nps << std::endl;
+                }
             }
 
-                    else if(token == "d")
-        {
-            board.Print();
-        }
+            else if(token == "bench")
+            {
+                struct BenchPos { const char* name; const char* fen; U64 expected; };
+                const BenchPos positions[] = {
+                    { "Pos 1 (Initial)", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 197281ULL },
+                    { "Pos 2 (Kiwipete)", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", 4085603ULL },
+                    { "Pos 3 (Silver)", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 43238ULL },
+                    { "Pos 4 (Talkchess)", "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1", 422333ULL },
+                    { "Pos 5 (CPW)", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 2103487ULL },
+                    { "Pos 6 (Fine 70)", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 3894594ULL }
+                };
 
+                int passed = 0;
+                U64 totalNodes = 0;
+                auto benchStart = std::chrono::steady_clock::now();
 
-        else if(token == "stop")
-        {
-            Search::stopSearch = true;
-        }
-        else if(token == "ucinewgame")
-        {
-            TT::Clear();
-            SearchStats::Reset();
-            std::memset(Search::historyTable, 0, sizeof(Search::historyTable));
-            std::memset(Search::killerMoves, 0, sizeof(Search::killerMoves));
-            std::memset(Search::counterMoves, 0, sizeof(Search::counterMoves));
-            std::memset(Search::continuationHistory, 0, sizeof(Search::continuationHistory));
-            Search::stopSearch = false;
-        }
+                for(const auto& pos : positions)
+                {
+                    Board b;
+                    b.LoadFEN(pos.fen);
+                    auto tStart = std::chrono::steady_clock::now();
+                    U64 nodes = Perft::Run(b, 4);
+                    auto tElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - tStart).count();
+                    totalNodes += nodes;
+                    bool ok = (nodes == pos.expected);
+                    if(ok) passed++;
+                    std::cout << pos.name << ": " << (ok ? "PASS" : "FAIL")
+                              << " (" << nodes << " nodes, " << tElapsed << "ms)" << std::endl;
+                }
+
+                auto totalElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - benchStart).count();
+                uint64_t benchNps = totalElapsed > 0 ? (totalNodes * 1000) / totalElapsed : 0;
+
+                std::cout << "========================================" << std::endl;
+                std::cout << "Perft Benchmark: " << passed << " / 6 passed" << std::endl;
+                std::cout << "Total Nodes: " << totalNodes << std::endl;
+                std::cout << "Total Time: " << totalElapsed << "ms" << std::endl;
+                std::cout << "NPS: " << benchNps << std::endl;
+                std::cout << "========================================" << std::endl;
+            }
+
+            else if(token == "d")
+            {
+                board.Print();
+            }
+
+            else if(token == "stop")
+            {
+                Search::stopSearch = true;
+            }
 
 
             else if(token == "go")
